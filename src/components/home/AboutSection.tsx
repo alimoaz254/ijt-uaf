@@ -61,29 +61,25 @@ export function AboutSection() {
             transition={{ duration: 0.8 }}
             className="relative"
           >
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] rounded-[3rem] rotate-3" />
+            <div>
               <img
                 src="https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=800&h=600&fit=crop"
                 alt="Students collaborating"
-                className="relative rounded-[3rem] shadow-2xl w-full h-[500px] object-cover"
+                className="w-full aspect-[4/3] object-cover"
               />
-              {/* Floating card */}
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 whileInView={{ y: 0, opacity: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.5 }}
-                className="absolute -bottom-8 -right-8 bg-white rounded-3xl p-6 shadow-xl"
+                className="mt-4 flex w-fit max-w-full items-center gap-4 border border-[var(--color-border)] bg-white p-4"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] flex items-center justify-center">
-                    <FiAward className="text-2xl text-white" />
-                  </div>
-                  <div>
-                    <div className="text-3xl font-bold text-[var(--color-primary)]">10+</div>
-                    <div className="text-sm text-gray-500">Years of Excellence</div>
-                  </div>
+                <div className="flex h-12 w-12 items-center justify-center bg-[var(--color-primary)]">
+                  <FiAward className="text-2xl text-white" />
+                </div>
+                <div>
+                  <div className="text-2xl font-semibold text-[var(--color-primary)]">10+</div>
+                  <div className="text-sm text-gray-500">Years of Excellence</div>
                 </div>
               </motion.div>
             </div>

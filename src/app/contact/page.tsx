@@ -92,7 +92,7 @@ export default function ContactPage() {
       </section>
 
       {/* Contact Info Cards */}
-      <section className="py-12 bg-[var(--color-background)] -mt-8 relative z-10">
+      <section className="py-12 bg-[var(--color-background)] relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-6">
             {contactInfo.map((info, index) => (

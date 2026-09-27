@@ -1,32 +1,107 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiMenu, FiX, FiUser, FiLogIn } from "react-icons/fi";
+import {
+  FiBook,
+  FiFileText,
+  FiHome,
+  FiImage,
+  FiInfo,
+  FiLogIn,
+  FiMail,
+  FiMenu,
+  FiUser,
+  FiUsers,
+  FiX,
+} from "react-icons/fi";
 
 const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/about", label: "About" },
-  { href: "/teams", label: "Teams" },
-  { href: "/gallery", label: "Gallery" },
-  { href: "/resources", label: "Resources" },
-  { href: "/news", label: "News" },
-  { href: "/contact", label: "Contact" },
+  { href: "/", label: "Home", icon: FiHome },
+  { href: "/about", label: "About", icon: FiInfo },
+  { href: "/teams", label: "Teams", icon: FiUsers },
+  { href: "/gallery", label: "Gallery", icon: FiImage },
+  { href: "/resources", label: "Resources", icon: FiBook },
+  { href: "/news", label: "News", icon: FiFileText },
+  { href: "/contact", label: "Contact", icon: FiMail },
 ];
 
+const dockOptions = {
+  proximity: 122,
+  spring: 0.19,
+  damping: 0.7,
+  widthGrowth: 17,
+  heightGrowth: 16,
+  drop: 3.5,
+} as const;
+
+const MotionLink = motion.create(Link);
+
 export function Header() {
-  const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const dockRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+    const dock = dockRef.current;
+    if (!dock) return;
+
+    const items = Array.from(dock.querySelectorAll<HTMLElement>("[data-dock-item]"));
+    const springStates = items.map((item) => ({ item, value: 0, velocity: 0 }));
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let pointerX: number | null = null;
+    let frame = 0;
+
+    const animate = () => {
+      frame = 0;
+      let isMoving = false;
+
+      springStates.forEach((state) => {
+        const bounds = state.item.getBoundingClientRect();
+        const distance = pointerX === null
+          ? Number.POSITIVE_INFINITY
+          : Math.abs(pointerX - (bounds.left + bounds.width / 2));
+        const target = Math.max(0, 1 - distance / dockOptions.proximity);
+        state.velocity = (state.velocity + (target - state.value) * dockOptions.spring) * dockOptions.damping;
+        state.value = Math.max(0, Math.min(1, state.value + state.velocity));
+
+        if (Math.abs(target - state.value) < 0.001 && Math.abs(state.velocity) < 0.001) {
+          state.value = target;
+          state.velocity = 0;
+        } else {
+          isMoving = true;
+        }
+
+        const influence = state.value;
+        state.item.style.setProperty("--dock-pad-x", `${12 + influence * dockOptions.widthGrowth / 2}px`);
+        state.item.style.setProperty("--dock-pad-y", `${8 + influence * dockOptions.heightGrowth / 2}px`);
+        state.item.style.setProperty("--dock-drop", `${influence * dockOptions.drop}px`);
+      });
+
+      if (isMoving && !reduceMotion) frame = requestAnimationFrame(animate);
     };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+
+    const scheduleAnimation = () => {
+      if (!frame) frame = requestAnimationFrame(animate);
+    };
+    const handlePointerMove = (event: PointerEvent) => {
+      pointerX = event.clientX;
+      scheduleAnimation();
+    };
+    const handlePointerLeave = () => {
+      pointerX = null;
+      scheduleAnimation();
+    };
+
+    dock.addEventListener("pointermove", handlePointerMove, { passive: true });
+    dock.addEventListener("pointerleave", handlePointerLeave, { passive: true });
+    return () => {
+      dock.removeEventListener("pointermove", handlePointerMove);
+      dock.removeEventListener("pointerleave", handlePointerLeave);
+      if (frame) cancelAnimationFrame(frame);
+    };
   }, []);
 
   return (
@@ -35,150 +110,125 @@ export function Header() {
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className={`site-header fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
-          isScrolled ? "is-scrolled" : ""
-        }`}
+        className="site-header site-header--dock fixed top-0 left-0 right-0 z-40"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="site-header__inner flex items-center justify-between h-20">
-            {/* Logo Section */}
-            <Link href="/" className="flex items-center gap-3 group">
-              <motion.div
-                whileHover={{ y: -2 }}
-                transition={{ duration: 0.2 }}
-                className="site-header__mark flex items-center justify-center"
-              >
-                <span className="font-bold text-xl">I</span>
-              </motion.div>
-              <div className="flex flex-col">
-                <span className="site-header__name font-bold text-xl text-[var(--color-primary)] transition-colors">
-                  IJT-UAF
-                </span>
-                <span className="text-xs text-[var(--color-text-muted)]">
-                  Islamic Student Organization
-                </span>
-              </div>
+        <div className="site-header__shell max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="site-header__inner flex items-center justify-between">
+            <Link href="/" className="site-header__brand group">
+              <span className="site-header__mark flex items-center justify-center" aria-hidden="true">I</span>
+              <span className="site-header__brand-copy">
+                <span className="site-header__name">IJT-UAF</span>
+                <span className="site-header__tagline">Islamic Student Organization</span>
+              </span>
             </Link>
 
-            {/* Desktop Navigation - Pill Style */}
-            <nav className="hidden lg:flex items-center">
-              <div className="site-header__nav-wrap">
-                <ul className="flex items-center gap-1">
-                  {navLinks.map((link) => (
-                    <li key={link.href}>
-                      <NavLink href={link.href} isActive={pathname === link.href}>
-                        {link.label}
-                      </NavLink>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            <nav ref={dockRef} className="site-header__dock hidden xl:flex" aria-label="Primary navigation">
+              {navLinks.map(({ href, label, icon: Icon }) => {
+                const isActive = pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
+                return (
+                  <MotionLink
+                    key={href}
+                    href={href}
+                    className={`site-header__dock-item ${isActive ? "is-active" : ""}`}
+                    data-dock-item
+                    aria-current={isActive ? "page" : undefined}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    {isActive && (
+                      <motion.span
+                        layoutId="site-header-active-pill"
+                        className="site-header__active-pill"
+                        transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                        aria-hidden="true"
+                      />
+                    )}
+                    <Icon className="site-header__dock-icon" aria-hidden="true" />
+                    <span className="site-header__dock-label">{label}</span>
+                  </MotionLink>
+                );
+              })}
             </nav>
 
-            {/* CTA Buttons */}
-            <div className="hidden lg:flex items-center gap-3">
-              <Link
-                href="/login"
-                className="site-header__login flex items-center gap-2 px-4 py-2.5 font-medium border transition-all duration-300"
-              >
-                <FiLogIn className="text-lg" />
-                Login
-              </Link>
-              <Link
-                href="/register"
-                className="site-header__join flex items-center gap-2 px-4 py-2.5 font-medium transition-all duration-300"
-              >
-                <FiUser className="text-lg" />
-                Join Now
-              </Link>
+            <div className="site-header__actions hidden xl:flex">
+              <AuthLink href="/login" label="Login" isActive={pathname === "/login"} icon={<FiLogIn aria-hidden="true" />} />
+              <AuthLink href="/register" label="Join" isActive={pathname === "/register"} icon={<FiUser aria-hidden="true" />} />
             </div>
 
-            {/* Mobile Menu Button */}
             <button
+              type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="site-header__menu lg:hidden p-2 border border-[var(--color-border)]"
+              className="site-header__menu xl:hidden"
+              aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="site-header-mobile-menu"
             >
-              {isMobileMenuOpen ? (
-                <FiX className="text-xl text-[var(--color-primary)]" />
-              ) : (
-                <FiMenu className="text-xl text-[var(--color-primary)]" />
-              )}
+              {isMobileMenuOpen ? <FiX aria-hidden="true" /> : <FiMenu aria-hidden="true" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
         <AnimatePresence>
           {isMobileMenuOpen && (
-            <motion.div
+            <motion.nav
+              id="site-header-mobile-menu"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="site-header__mobile lg:hidden border-t border-[var(--color-border)]"
+              className="site-header__mobile xl:hidden"
+              aria-label="Mobile navigation"
             >
-              <div className="px-4 py-6 space-y-2">
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={`block px-4 py-3 rounded-xl font-medium transition-all ${
-                      pathname === link.href
-                        ? "bg-[var(--color-primary)] text-white"
-                        : "text-[var(--color-primary)] hover:bg-[var(--color-background-alt)]"
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-                <div className="pt-4 space-y-2">
-                  <Link
-                    href="/login"
-                    className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl font-medium border-2 border-[var(--color-primary)] text-[var(--color-primary)]"
-                  >
-                    <FiLogIn className="text-lg" />
-                    Login
-                  </Link>
-                  <Link
-                    href="/register"
-                    className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl font-medium bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white"
-                  >
-                    <FiUser className="text-lg" />
-                    Join Now
-                  </Link>
+              <div className="site-header__mobile-inner">
+                {navLinks.map(({ href, label, icon: Icon }) => {
+                  const isActive = pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`site-header__mobile-link ${isActive ? "is-active" : ""}`}
+                      aria-current={isActive ? "page" : undefined}
+                    >
+                      <Icon aria-hidden="true" />
+                      {label}
+                    </Link>
+                  );
+                })}
+                <div className="site-header__mobile-actions">
+                  <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}><FiLogIn aria-hidden="true" />Login</Link>
+                  <Link href="/register" onClick={() => setIsMobileMenuOpen(false)}><FiUser aria-hidden="true" />Join</Link>
                 </div>
               </div>
-            </motion.div>
+            </motion.nav>
           )}
         </AnimatePresence>
       </motion.header>
 
       {/* Spacer for fixed header */}
-      <div className="h-20" />
+      <div className="site-header__spacer" />
     </>
   );
 }
 
-function NavLink({
+function AuthLink({
   href,
+  label,
   isActive,
-  children,
+  icon,
 }: {
   href: string;
+  label: string;
   isActive: boolean;
-  children: React.ReactNode;
+  icon: React.ReactNode;
 }) {
   return (
-    <Link
+    <MotionLink
       href={href}
-      className={`px-4 py-2 rounded-full font-medium text-sm transition-all duration-300 ${
-        isActive
-            ? "is-active"
-            : ""
-      }`}
-          aria-current={isActive ? "page" : undefined}
+      className={`site-header__action ${isActive ? "is-active" : ""}`}
+      aria-current={isActive ? "page" : undefined}
     >
-      {children}
-    </Link>
+      {isActive && <motion.span layoutId="site-header-active-pill" className="site-header__active-pill" aria-hidden="true" />}
+      {icon}
+      <span>{label}</span>
+    </MotionLink>
   );
 }
